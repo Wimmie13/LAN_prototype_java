@@ -1,30 +1,90 @@
 package nl.asdproject2;
 
-// File Name GreetingClient.java
-import java.net.*;
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.Socket;
 
-public class GreetingClient {
+public class GreetingClient
+{
+    private String serverName;
+    private int port;
+    private Socket client;
+    private String username;
 
-    public static void main(String [] args) {
-        String serverName = args[0];
-        int port = Integer.parseInt(args[1]);
-        try {
-            System.out.println("Connecting to " + serverName + " on port " + port);
-            Socket client = new Socket(serverName, port);
+    public GreetingClient(String serverName, int port)
+    {
+        this.serverName = serverName;
+        this.port = port;
 
-            System.out.println("Just connected to " + client.getRemoteSocketAddress());
-            OutputStream outToServer = client.getOutputStream();
-            DataOutputStream out = new DataOutputStream(outToServer);
-
-            out.writeUTF("Hello from " + client.getLocalSocketAddress());
-            InputStream inFromServer = client.getInputStream();
-            DataInputStream in = new DataInputStream(inFromServer);
-
-            System.out.println("Server says " + in.readUTF());
-            client.close();
-        } catch (IOException e) {
+        try
+        {
+            this.username = getTheUsername();
+        }
+        catch (IOException e)
+        {
             e.printStackTrace();
         }
+    }
+
+    public void run()
+    {
+        try
+        {
+            Writer.write("Connecting to " + serverName + " on port " + port);
+            client = new Socket(serverName, port);
+            Writer.write("Just connected to " + client.getRemoteSocketAddress());
+
+            new ClientInputThread(client.getInputStream()).start();
+
+            startMessaging();
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+    private void startMessaging()
+    {
+        String message = "";
+        while (!message.toLowerCase().equals("close"))
+        {
+            try
+            {
+                message = input();
+                Writer.writeUTF(client.getOutputStream(), username + ": " + message);
+            }
+            catch (IOException e)
+            {
+                e.printStackTrace();
+            }
+        }
+        close();
+    }
+
+    private void close()
+    {
+        try
+        {
+            client.close();
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+    private String input() throws IOException
+    {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+        return reader.readLine();
+    }
+
+    private String getTheUsername() throws IOException
+    {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+        System.out.print("Enter your username: ");
+        return reader.readLine();
     }
 }
